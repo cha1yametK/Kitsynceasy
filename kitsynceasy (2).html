@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>KitSyncEasy — ระบบจัดการร้านค้า</title>
+<meta name="description" content="KitSyncEasy: ระบบจัดการร้านค้าแบบครบวงจร สั่งอาหาร ครัว แคชเชียร์ และหลังบ้าน ซิงค์เรียลไทม์" />
+
+<!-- App icon -->
+<link rel="icon" type="image/png" href="logo.png" onerror="this.href='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23D5B26E%22/%3E%3Ctext x=%2232%22 y=%2242%22 font-family=%22Georgia,serif%22 font-size=%2226%22 fill=%22%232B2420%22 text-anchor=%22middle%22%3EKS%3C/text%3E%3C/svg%3E'" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ==================================================================
+   DESIGN TOKENS
+   ================================================================== */
+:root {
+  --color-primary: #D5B26E;
+  --color-primary-dark: #B8934F;
+  --color-primary-light: #E6CFA0;
+  --color-base: #FFFFFF;
+  --color-ink: #2B2420;
+  --color-ink-soft: #5C5248;
+  --color-cream: #F7F3EC;
+  --color-cream-deep: #EFE7D8;
+  --color-sage: #7A9B76;
+  --color-sage-bg: #EAF1E8;
+  --color-terracotta: #C1544B;
+  --color-terracotta-bg: #FBEAE8;
+  --color-border: #E4DCC9;
+
+  --font-display: 'Playfair Display', 'Noto Sans Thai', serif;
+  --font-body: 'Inter', 'Noto Sans Thai', sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 2px 8px rgba(43, 36, 32, 0.06), 0 1px 2px rgba(43, 36, 32, 0.04);
+  --shadow-lifted: 0 12px 32px rgba(43, 36, 32, 0.14), 0 4px 10px rgba(43, 36, 32, 0.08);
+  --shadow-modal: 0 24px 64px rgba(43, 36, 32, 0.28);
+
+  --ease-signature: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 160ms;
+  --dur-base: 320ms;
+  --dur-slow: 560ms;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; min-height: 100vh;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; margin: 0; color: var(--color-ink); }
+p { margin: 0; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+a { color: inherit; }
+.hidden { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible { outline: 2px solid var(--color-primary-dark); outline-offset: 2px; border-radius: 4px; }
+
+/* Page Shell & Globals */
+.app-page { min-height: 100vh; width: 100%; opacity: 0; transform: translateY(10px); }
+.app-page.page-enter { animation: pageEnter var(--dur-slow) var(--ease-signature) forwards; }
+@keyframes pageEnter { to { opacity: 1; transform: translateY(0); } }
+
+.boot-error-banner { position: fixed; inset: 0; z-index: 9999; background: var(--color-ink); color: var(--color-base); display: flex; align-items: center; justify-content: center; padding: 32px; text-align: center; }
+.boot-error-banner h2 { color: var(--color-primary); margin-bottom: 12px; }
+.boot-error-banner p { max-width: 480px; color: #D9D2C8; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: var(--radius-pill); border: none; font-weight: 600; font-size: 15px; transition: transform var(--dur-fast) var(--ease-signature), box-shadow var(--dur-fast) var(--ease-signature), background var(--dur-fast) var(--ease-signature); white-space: nowrap; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-primary { background: var(--color-primary); color: var(--color-ink); box-shadow: var(--shadow-card); }
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-dark); box-shadow: var(--shadow-lifted); transform: translateY(-1px); }
+.btn-ghost { background: transparent; color: var(--color-ink-soft); border: 1.5px solid var(--color-border); }
+.btn-ghost:hover:not(:disabled) { background: var(--color-cream-deep); color: var(--color-ink); }
+.btn-full { width: 100%; }
+.btn-loading { position: relative; color: transparent !important; }
+.btn-loading::after { content: ''; position: absolute; width: 18px; height: 18px; border: 2.5px solid rgba(43,36,32,0.25); border-top-color: var(--color-ink); border-radius: 50%; animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-google { background: var(--color-base); color: var(--color-ink); border: 1.5px solid var(--color-border); box-shadow: var(--shadow-card); }
+.btn-google:hover:not(:disabled) { box-shadow: var(--shadow-lifted); transform: translateY(-1px); }
+.btn-google img { width: 20px; height: 20px; }
+.btn-countdown { background: #C9C2B4; color: var(--color-ink); cursor: not-allowed; position: relative; transition: background var(--dur-base) var(--ease-signature); }
+.btn-countdown.btn-ready { background: var(--color-sage); color: var(--color-base); cursor: pointer; animation: readyPulse var(--dur-slow) var(--ease-signature); }
+@keyframes readyPulse { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
+
+/* Forms */
+.field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.field-label { font-size: 13.5px; font-weight: 600; color: var(--color-ink-soft); }
+.field-input, .field-select { padding: 13px 16px; border-radius: var(--radius-sm); border: 1.5px solid var(--color-border); background: var(--color-base); font-size: 15px; color: var(--color-ink); transition: border-color var(--dur-fast) var(--ease-signature), box-shadow var(--dur-fast) var(--ease-signature); }
+.field-input:focus, .field-select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 4px rgba(213, 178, 110, 0.18); outline: none; }
+.field-error { background: var(--color-terracotta-bg); color: var(--color-terracotta); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; margin-bottom: 16px; }
+.field-success { background: var(--color-sage-bg); color: #4A6B47; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; margin-top: 8px; margin-bottom: 16px; }
+
+/* Page Layouts & Specifics */
+#page-onboarding { display: flex; flex-direction: column; background: linear-gradient(180deg, var(--color-cream) 0%, var(--color-cream-deep) 100%); }
+.onboarding-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; max-width: 480px; margin: 0 auto; width: 100%; }
+.onboarding-slide { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px; width: 100%; }
+.onboarding-icon-frame { width: 120px; height: 120px; border-radius: 50%; background: var(--color-base); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-lifted); margin-bottom: 8px; animation: floatIcon 3.2s ease-in-out infinite; }
+@keyframes floatIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.onboarding-icon-frame svg { width: 56px; height: 56px; }
+.onboarding-title { font-size: 26px; }
+.onboarding-desc { color: var(--color-ink-soft); font-size: 15.5px; max-width: 360px; }
+.onboarding-dots { display: flex; gap: 8px; justify-content: center; margin: 28px 0; }
+.onboarding-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); transition: all var(--dur-base) var(--ease-signature); }
+.onboarding-dot-active { width: 24px; background: var(--color-primary); border-radius: var(--radius-pill); }
+.onboarding-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
+.onboarding-skip-link { background: none; border: none; color: var(--color-ink-soft); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; padding: 8px; }
+
+#page-auth { display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(ellipse at top, var(--color-cream-deep) 0%, var(--color-cream) 55%); }
+.auth-card { background: var(--color-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-lifted); padding: 44px 36px; max-width: 420px; width: 100%; text-align: center; }
+.auth-logo-frame { width: 88px; height: 88px; margin: 0 auto 20px; border-radius: var(--radius-md); overflow: hidden; background: var(--color-cream); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-card); }
+.auth-title { font-size: 24px; margin-bottom: 6px; }
+.auth-subtitle { color: var(--color-ink-soft); font-size: 14.5px; margin-bottom: 28px; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--color-ink-soft); font-size: 13px; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
+
+#page-create-shop { display: flex; align-items: center; justify-content: center; padding: 24px; min-height: 100vh; background: var(--color-cream); }
+.create-shop-card { background: var(--color-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-lifted); padding: 40px 34px; max-width: 460px; width: 100%; }
+.create-shop-eyebrow { color: var(--color-primary-dark); font-weight: 700; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+.create-shop-title { font-size: 24px; margin-bottom: 22px; }
+.field-hint { font-size: 12.5px; color: var(--color-ink-soft); margin-top: 4px; }
+
+#page-capture-warning { display: flex; align-items: center; justify-content: center; padding: 24px; min-height: 100vh; background: var(--color-ink); }
+.capture-card { background: var(--color-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); padding: 40px 34px; max-width: 440px; width: 100%; text-align: center; }
+.capture-icon { width: 64px; height: 64px; margin: 0 auto 18px; background: var(--color-terracotta-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--color-terracotta); }
+.capture-title { font-size: 22px; margin-bottom: 10px; }
+.capture-desc { color: var(--color-ink-soft); font-size: 14.5px; margin-bottom: 24px; }
+.capture-password-box { background: var(--color-cream); border: 2px dashed var(--color-primary); border-radius: var(--radius-md); padding: 20px; margin-bottom: 28px; }
+.capture-password-label { font-size: 12px; color: var(--color-ink-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: block; }
+#capture-password-display { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: 0.04em; color: var(--color-ink); word-break: break-all; }
+.capture-countdown-wrap { position: relative; width: 64px; height: 64px; margin: 0 auto 20px; }
+.capture-countdown-svg { transform: rotate(-90deg); width: 64px; height: 64px; }
+.capture-countdown-track { fill: none; stroke: var(--color-border); stroke-width: 5; }
+.capture-countdown-ring { fill: none; stroke: var(--color-sage); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.capture-countdown-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: var(--color-ink); }
+
+#page-dashboard { background: var(--color-cream); min-height: 100vh; padding-bottom: 60px; }
+.dashboard-topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; background: var(--color-base); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 20; }
+.dashboard-topbar-brand { display: flex; align-items: center; gap: 12px; }
+.dashboard-topbar-logo { width: 40px; height: 40px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-cream); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; color: var(--color-primary-dark); }
+#dashboard-shop-name { font-size: 19px; font-weight: 600; }
+.btn-logout { background: none; border: none; color: var(--color-ink-soft); font-size: 14px; font-weight: 500; padding: 8px 12px; border-radius: var(--radius-sm); transition: background var(--dur-fast) var(--ease-signature); }
+.btn-logout:hover { background: var(--color-cream-deep); color: var(--color-ink); }
+.dashboard-content { max-width: 1080px; margin: 0 auto; padding: 32px 24px; }
+.dashboard-section-title { font-size: 20px; margin-bottom: 18px; }
+.feature-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 44px; }
+@media (max-width: 900px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .feature-grid { grid-template-columns: 1fr; } }
+.feature-card { background: var(--color-base); border-radius: var(--radius-md); border: 1.5px solid var(--color-border); padding: 26px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; text-align: left; transition: transform var(--dur-base) var(--ease-signature), box-shadow var(--dur-base) var(--ease-signature), border-color var(--dur-base) var(--ease-signature); cursor: pointer; }
+.feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lifted); border-color: var(--color-primary); }
+.feature-card-icon { width: 48px; height: 48px; border-radius: var(--radius-sm); background: var(--color-cream); display: flex; align-items: center; justify-content: center; color: var(--color-primary-dark); }
+.feature-card-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+.feature-card-desc { font-size: 13px; color: var(--color-ink-soft); }
+
+.sales-history-panel { background: var(--color-base); border-radius: var(--radius-lg); border: 1.5px solid var(--color-border); padding: 28px; }
+.sales-summary-row { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
+.sales-summary-stat { flex: 1; min-width: 140px; }
+.sales-summary-label { font-size: 12.5px; color: var(--color-ink-soft); margin-bottom: 4px; display: block; }
+.sales-summary-value { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--color-primary-dark); }
+.sales-order-list { display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow-y: auto; }
+.sales-order-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--color-cream); border-radius: var(--radius-sm); font-size: 14px; }
+.sales-order-row-main { display: flex; flex-direction: column; gap: 2px; }
+.sales-order-row-table { font-weight: 600; }
+.sales-order-row-time { font-size: 12px; color: var(--color-ink-soft); }
+.sales-order-row-total { font-weight: 700; font-family: var(--font-display); font-size: 16px; }
+.empty-state-text { color: var(--color-ink-soft); font-size: 14px; padding: 24px 0; text-align: center; }
+.empty-state-text-sm { color: var(--color-ink-soft); font-size: 13px; padding: 12px 0; text-align: center; }
+
+/* Modals */
+.modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(43, 36, 32, 0.45); display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn var(--dur-base) var(--ease-signature); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-card { background: var(--color-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); padding: 30px 28px; max-width: 420px; width: 100%; max-height: 80vh; overflow-y: auto; animation: modalPop var(--dur-base) var(--ease-signature); position: relative; }
+@keyframes modalPop { from { opacity: 0; transform: scale(0.94) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.modal-title { font-size: 19px; margin-bottom: 6px; }
+.modal-subtitle { font-size: 13.5px; color: var(--color-ink-soft); margin-bottom: 20px; }
+.modal-close-x { position: absolute; top: 18px; right: 18px; background: none; border: none; font-size: 18px; color: var(--color-ink-soft); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background var(--dur-fast) var(--ease-signature); }
+.modal-close-x:hover { background: var(--color-cream-deep); }
+.staff-picker-list { display: flex; flex-direction: column; gap: 10px; }
+.staff-picker-item { padding: 14px 18px; background: var(--color-cream); border: 1.5px solid transparent; border-radius: var(--radius-sm); text-align: left; font-weight: 600; font-size: 15px; transition: all var(--dur-fast) var(--ease-signature); cursor: pointer; }
+.staff-picker-item:hover { border-color: var(--color-primary); background: var(--color-primary-light); }
+.modal-cancel-btn { margin-top: 16px; width: 100%; background: none; border: none; color: var(--color-ink-soft); padding: 10px; font-size: 14px; font-weight: 500; }
+
+/* Features Common */
+.feature-topbar { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; background: var(--color-base); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 20; gap: 16px; flex-wrap: wrap; }
+.feature-topbar-left { display: flex; align-items: center; gap: 14px; }
+.btn-back-dashboard { background: var(--color-cream); border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background var(--dur-fast) var(--ease-signature); color: var(--color-ink); }
+.btn-back-dashboard:hover { background: var(--color-cream-deep); }
+.feature-topbar-title { font-size: 19px; }
+.staff-badge { background: var(--color-cream); color: var(--color-ink-soft); padding: 6px 14px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; }
+
+/* Waiter */
+#page-waiter { background: var(--color-cream); min-height: 100vh; }
+.waiter-content { max-width: 1080px; margin: 0 auto; padding: 26px 24px 60px; }
+.waiter-active-table-bar { display: flex; align-items: center; justify-content: space-between; background: var(--color-base); border: 1.5px solid var(--color-border); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 22px; cursor: pointer; }
+#waiter-active-table-label { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+.waiter-active-table-hint { font-size: 12.5px; color: var(--color-ink-soft); }
+.menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.menu-item-card { background: var(--color-base); border: 1.5px solid var(--color-border); border-radius: var(--radius-md); padding: 18px 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; transition: transform var(--dur-fast) var(--ease-signature), box-shadow var(--dur-fast) var(--ease-signature), border-color var(--dur-fast) var(--ease-signature); cursor: pointer; user-select: none; }
+.menu-item-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); border-color: var(--color-primary); }
+.menu-item-card:active { transform: scale(0.96); }
+.menu-item-name { font-weight: 600; font-size: 14.5px; text-align: left; }
+.menu-item-price { color: var(--color-primary-dark); font-weight: 700; font-family: var(--font-display); font-size: 15px; }
+.table-chip { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 10px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border); transition: all var(--dur-fast) var(--ease-signature); cursor: pointer; user-select: none; }
+.table-chip-empty { background: var(--color-sage-bg); border-color: var(--color-sage); }
+.table-chip-occupied { background: var(--color-terracotta-bg); border-color: var(--color-terracotta); }
+.table-chip:hover { transform: scale(1.04); box-shadow: var(--shadow-card); }
+.table-chip-label { font-weight: 700; font-family: var(--font-display); font-size: 15px; }
+.table-chip-status { font-size: 11.5px; color: var(--color-ink-soft); }
+.table-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+.slide-panel-overlay { position: fixed; inset: 0; z-index: 90; background: rgba(43,36,32,0.4); display: flex; justify-content: flex-end; }
+.slide-panel { background: var(--color-base); width: 100%; max-width: 420px; height: 100%; padding: 24px; overflow-y: auto; transform: translateX(100%); transition: transform var(--dur-slow) var(--ease-signature); display: flex; flex-direction: column; }
+.slide-panel.panel-slide-in { transform: translateX(0); }
+.slide-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.pending-list-wrap { flex: 1; overflow-y: auto; margin: 18px 0; display: flex; flex-direction: column; gap: 10px; }
+.pending-item-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.pending-item-name { font-weight: 500; font-size: 14px; }
+.pending-item-qty { display: flex; align-items: center; gap: 8px; }
+.qty-btn { width: 26px; height: 26px; border-radius: 50%; background: var(--color-cream); border: none; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.pending-item-subtotal { font-weight: 700; font-family: var(--font-display); font-size: 14px; min-width: 60px; text-align: right; color: var(--color-primary-dark); }
+.waiter-sent-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--color-sage); color: var(--color-base); padding: 14px 26px; border-radius: var(--radius-pill); font-weight: 600; font-size: 14px; box-shadow: var(--shadow-lifted); opacity: 0; z-index: 200; transition: all var(--dur-base) var(--ease-signature); pointer-events: none; }
+.waiter-sent-toast.toast-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Kitchen */
+#page-kitchen { background: var(--color-cream); min-height: 100vh; }
+.kitchen-content { max-width: 900px; margin: 0 auto; padding: 26px 24px 60px; display: flex; flex-direction: column; gap: 16px; }
+.kitchen-order-card { background: var(--color-base); border: 1.5px solid var(--color-border); border-left: 5px solid var(--color-terracotta); border-radius: var(--radius-md); padding: 18px 22px; animation: kitchenCardIn var(--dur-slow) var(--ease-signature); }
+@keyframes kitchenCardIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+.kitchen-order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.kitchen-order-table { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.kitchen-order-count { font-size: 12.5px; color: var(--color-ink-soft); background: var(--color-cream); padding: 4px 10px; border-radius: var(--radius-pill); }
+.kitchen-order-items { display: flex; flex-direction: column; gap: 4px; }
+.kitchen-item-row { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-radius: var(--radius-sm); cursor: pointer; transition: background var(--dur-fast) var(--ease-signature); }
+.kitchen-item-row:hover { background: var(--color-cream); }
+.kitchen-item-checkbox { width: 22px; height: 22px; accent-color: var(--color-sage); cursor: pointer; flex-shrink: 0; pointer-events: none; }
+.kitchen-item-qty { font-weight: 700; color: var(--color-primary-dark); min-width: 28px; }
+.kitchen-item-name { font-size: 15px; flex: 1; }
+.kitchen-item-done-animating { animation: itemDoneFlash var(--dur-base) var(--ease-signature); opacity: 0.5; pointer-events: none; }
+@keyframes itemDoneFlash { 0% { background: var(--color-sage-bg); } 100% { background: transparent; } }
+
+/* Cashier */
+#page-cashier { background: var(--color-cream); min-height: 100vh; }
+.cashier-content { max-width: 1080px; margin: 0 auto; padding: 26px 24px 60px; }
+.cashier-bills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.cashier-bill-card { background: var(--color-base); border: 1.5px solid var(--color-border); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: box-shadow var(--dur-base) var(--ease-signature), transform var(--dur-base) var(--ease-signature); }
+.cashier-bill-card:hover { box-shadow: var(--shadow-card); transform: translateY(-2px); }
+.cashier-bill-header { display: flex; justify-content: space-between; align-items: center; }
+.cashier-bill-table { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.cashier-bill-count { font-size: 12px; color: var(--color-ink-soft); }
+.cashier-bill-total { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--color-primary-dark); }
+.btn-close-bill { background: var(--color-ink); color: var(--color-base); border: none; padding: 10px; border-radius: var(--radius-pill); font-weight: 600; font-size: 13.5px; transition: background var(--dur-fast) var(--ease-signature); cursor: pointer; }
+.btn-close-bill:hover { background: #453B33; }
+.cashier-close-modal-stats { display: flex; justify-content: space-between; padding: 16px 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); margin: 16px 0; }
+.cashier-close-modal-actions { display: flex; flex-direction: column; gap: 10px; }
+
+/* Admin Lock */
+#page-admin-lock { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: var(--color-ink); }
+.admin-lock-card { background: var(--color-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); padding: 40px 34px; max-width: 400px; width: 100%; text-align: center; }
+.admin-lock-icon { width: 60px; height: 60px; margin: 0 auto 18px; background: var(--color-cream); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--color-ink); }
+.admin-lock-title { font-size: 21px; margin-bottom: 24px; }
+#admin-pin-input { text-align: center; letter-spacing: 0.2em; font-size: 18px; font-weight: 700; }
+.admin-lock-back { margin-top: 16px; background: none; border: none; color: var(--color-ink-soft); font-size: 13.5px; font-weight: 500; cursor: pointer; text-decoration: underline; }
+
+/* Admin */
+#page-admin { background: var(--color-cream); min-height: 100vh; }
+.admin-content { max-width: 900px; margin: 0 auto; padding: 26px 24px 60px; }
+.admin-tabs { display: flex; gap: 6px; margin-bottom: 26px; overflow-x: auto; padding-bottom: 4px; }
+.admin-tab-btn { background: var(--color-base); border: 1.5px solid var(--color-border); padding: 10px 18px; border-radius: var(--radius-pill); font-size: 13.5px; font-weight: 600; color: var(--color-ink-soft); white-space: nowrap; transition: all var(--dur-fast) var(--ease-signature); }
+.admin-tab-btn-active { background: var(--color-ink); color: var(--color-base); border-color: var(--color-ink); }
+.admin-panel-card { background: var(--color-base); border: 1.5px solid var(--color-border); border-radius: var(--radius-lg); padding: 28px; }
+.admin-panel-title { font-size: 18px; margin-bottom: 20px; }
+.admin-panel-divider { height: 1px; background: var(--color-border); margin: 26px 0; }
+.admin-list-row { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--color-border); }
+.admin-list-row:last-child { border-bottom: none; }
+.admin-list-row-main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.admin-list-row-title { font-weight: 600; font-size: 14.5px; }
+.admin-list-row-sub { font-size: 12.5px; color: var(--color-ink-soft); }
+.admin-list-row-delete { background: none; border: none; color: var(--color-terracotta); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: background var(--dur-fast) var(--ease-signature); flex-shrink: 0; }
+.admin-list-row-delete:hover { background: var(--color-terracotta-bg); }
+.badge-system { background: var(--color-primary-light); color: var(--color-ink); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-pill); margin-left: 6px; vertical-align: middle; }
+.toggle-switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: var(--color-border); border-radius: var(--radius-pill); transition: background var(--dur-base) var(--ease-signature); cursor: pointer; }
+.toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: var(--color-base); border-radius: 50%; transition: transform var(--dur-base) var(--ease-signature); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle-switch input:checked + .toggle-slider { background: var(--color-sage); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+.admin-add-form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.admin-add-form-row .field-group { flex: 1; min-width: 120px; margin-bottom: 0; }
+.admin-staff-row { padding: 16px 4px; border-bottom: 1px solid var(--color-border); }
+.admin-staff-row:last-child { border-bottom: none; }
+.admin-staff-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.admin-staff-perms { display: flex; gap: 8px; flex-wrap: wrap; }
+.staff-perm-chip { display: flex; align-items: center; gap: 6px; background: var(--color-cream); padding: 6px 12px; border-radius: var(--radius-pill); font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.staff-perm-chip input { accent-color: var(--color-sage); width: 15px; height: 15px; }
+.staff-perm-chip input:disabled { opacity: 0.5; }
+.btn-kick-device { background: var(--color-terracotta-bg); color: var(--color-terracotta); border: none; padding: 8px 16px; border-radius: var(--radius-pill); font-size: 12.5px; font-weight: 600; transition: background var(--dur-fast) var(--ease-signature); }
+.btn-kick-device:hover { background: #F5D5D2; }
+.btn-unblock-device { background: var(--color-sage-bg); color: #4A6B47; border: none; padding: 8px 16px; border-radius: var(--radius-pill); font-size: 12.5px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="boot-error" class="boot-error-banner hidden">
+  <div>
+    <h2>ไม่สามารถเชื่อมต่อระบบได้</h2>
+    <p id="boot-error-detail"></p>
+  </div>
+</div>
+
+<!-- ==================================================================
+     PAGE 1 — ONBOARDING
+     ================================================================== -->
+<section id="page-onboarding" class="app-page">
+  <div class="onboarding-wrap">
+    <div class="onboarding-slide">
+      <div class="onboarding-icon-frame">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="#D5B26E" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <h1 class="onboarding-title">สั่งอาหารได้ในไม่กี่แตะ</h1>
+      <p class="onboarding-desc">เลือกโต๊ะ เลือกเมนู ส่งเข้าครัวทันที ทุกอย่างซิงค์แบบเรียลไทม์ระหว่างหน้าร้านกับครัว</p>
+    </div>
+    <div class="onboarding-slide hidden">
+      <div class="onboarding-icon-frame">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 3v18M6 8h9a3 3 0 010 6H6" stroke="#D5B26E" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <h1 class="onboarding-title">ครัวเห็นออเดอร์ทันทีที่สั่ง</h1>
+      <p class="onboarding-desc">รายการอาหารเรียงตามโต๊ะ กดติ๊กเมื่อทำเสร็จ บันทึกลงบิลของโต๊ะนั้นโดยอัตโนมัติ</p>
+    </div>
+    <div class="onboarding-slide hidden">
+      <div class="onboarding-icon-frame">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="#D5B26E" stroke-width="2"/><path d="M8 9h8M8 13h5" stroke="#D5B26E" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <h1 class="onboarding-title">ปิดบิลและดูยอดขายง่ายๆ</h1>
+      <p class="onboarding-desc">แคชเชียร์เห็นทุกบิลที่เปิดอยู่ ปิดบิล ปริ้นท์ใบเสร็จ พร้อมสรุปยอดขายให้อัตโนมัติ</p>
+    </div>
+    <div class="onboarding-slide hidden">
+      <div class="onboarding-icon-frame">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3" stroke="#D5B26E" stroke-width="2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="#D5B26E" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <h1 class="onboarding-title">คุมทุกอย่างจากหลังบ้าน</h1>
+      <p class="onboarding-desc">จัดการโต๊ะ เมนู พนักงาน และสิทธิ์การเข้าใช้งานของทีมได้ในที่เดียว</p>
+    </div>
+    <div class="onboarding-dots">
+      <span class="onboarding-dot onboarding-dot-active"></span>
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot"></span>
+    </div>
+    <div class="onboarding-actions">
+      <button id="btn-onboarding-next" class="btn btn-primary btn-full">ถัดไป</button>
+      <button id="btn-onboarding-skip" class="onboarding-skip-link">ข้ามไปเลย</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     PAGE 2 — AUTH (Google Login / Signup)
+     ================================================================== -->
+<section id="page-auth" class="app-page hidden">
+  <div class="auth-card">
+    <div class="auth-logo-frame">
+      <span style='font-family:Playfair Display,serif;font-size:32px;font-weight:800;color:#D5B26E'>KS</span>
+    </div>
+    <h1 class="auth-title">เข้าสู่ระบบ KitSyncEasy</h1>
+    <p class="auth-subtitle">1 อีเมล ต่อ 1 ร้านค้า เข้าสู่ระบบด้วย Google เพื่อเริ่มต้น</p>
+    <div id="auth-error" class="field-error hidden"></div>
+    <button id="btn-google-login" class="btn btn-google btn-full">
+      <svg width="20" height="20" viewBox="0 0 20 20"><path fill="#4285F4" d="M19.6 10.23c0-.68-.06-1.36-.18-2H10v3.79h5.4a4.6 4.6 0 01-2 3.02v2.5h3.24c1.9-1.75 3-4.33 3-7.3z"/><path fill="#34A853" d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.24-2.5c-.9.6-2.06.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H1.06v2.58A10 10 0 0010 20z"/><path fill="#FBBC05" d="M4.4 11.9a6 6 0 010-3.8V5.52H1.06a10 10 0 000 8.96l3.34-2.58z"/><path fill="#EA4335" d="M10 3.98c1.47 0 2.8.5 3.84 1.5l2.87-2.87A9.96 9.96 0 0010 0 10 10 0 001.06 5.52L4.4 8.1C5.2 5.74 7.4 3.98 10 3.98z"/></svg>
+      เข้าสู่ระบบด้วย Google
+    </button>
+    <div class="auth-divider">หรือ</div>
+    <p class="auth-subtitle" style="margin-bottom:0">ยังไม่มีร้าน? เข้าสู่ระบบด้วย Google ด้านบนเพื่อสร้างร้านใหม่ได้ทันที</p>
+  </div>
+</section>
+
+<!-- ==================================================================
+     PAGE 3 — CREATE SHOP
+     ================================================================== -->
+<section id="page-create-shop" class="app-page hidden">
+  <div class="create-shop-card">
+    <p class="create-shop-eyebrow">เริ่มต้นใช้งาน</p>
+    <h1 class="create-shop-title">สร้างร้านค้าของคุณ</h1>
+    <div id="create-shop-error" class="field-error hidden"></div>
+    <form id="form-create-shop">
+      <div class="field-group">
+        <label class="field-label" for="shop-name">ชื่อร้าน</label>
+        <input id="shop-name" class="field-input" type="text" placeholder="เช่น ร้านอาหารบ้านสวน" required />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="shop-type">ประเภทร้าน</label>
+        <select id="shop-type" class="field-select" required>
+          <option value="">เลือกประเภทร้าน</option>
+          <option value="restaurant">ร้านอาหาร</option>
+          <option value="drinks">ร้านเครื่องดื่ม</option>
+          <option value="other">อื่นๆ</option>
+        </select>
+        <p class="field-hint">ระบบนี้ออกแบบมาให้เหมาะกับร้านประเภทของกินโดยเฉพาะ</p>
+      </div>
+      <div id="shop-type-other-wrap" class="field-group hidden">
+        <label class="field-label" for="shop-type-other">ระบุประเภทร้าน</label>
+        <input id="shop-type-other" class="field-input" type="text" placeholder="ระบุประเภทของคุณ" />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="shop-table-count">จำนวนโต๊ะ</label>
+        <input id="shop-table-count" class="field-input" type="number" min="1" value="10" required />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="shop-admin-password">รหัสผ่านหลังบ้าน (PIN)</label>
+        <input id="shop-admin-password" class="field-input" type="password" placeholder="ตั้งรหัส PIN อย่างน้อย 4 ตัว" required minlength="4" />
+        <p class="field-hint">ใช้สำหรับเข้าตั้งค่าร้านและเมนูในระบบหลังบ้าน</p>
+      </div>
+      <button type="submit" id="btn-create-shop-submit" class="btn btn-primary btn-full" style="margin-top: 10px;">สร้างร้านค้า</button>
+    </form>
+  </div>
+</section>
+
+<!-- ==================================================================
+     PAGE 4 — CAPTURE-PASSWORD WARNING
+     ================================================================== -->
+<section id="page-capture-warning" class="app-page hidden">
+  <div class="capture-card">
+    <div class="capture-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <h1 class="capture-title">รหัสผ่านหลังบ้านของคุณคือ</h1>
+    <p class="capture-desc">รหัสนี้ใช้สำหรับเข้าไปจัดการเมนูและพนักงาน กรุณาจดจำไว้ให้ดี หากลืมจะไม่สามารถแก้ไขข้อมูลร้านได้</p>
+    <div class="capture-password-box">
+      <span class="capture-password-label">PIN ของคุณ</span>
+      <div id="capture-password-display"></div>
+    </div>
+    <div class="capture-countdown-wrap">
+      <svg class="capture-countdown-svg"><circle class="capture-countdown-track" cx="32" cy="32" r="26"/><circle id="capture-countdown-ring" class="capture-countdown-ring" cx="32" cy="32" r="26"/></svg>
+      <div id="capture-countdown-label" class="capture-countdown-label">5</div>
+    </div>
+    <button id="btn-capture-continue" class="btn btn-countdown btn-full" disabled>เข้าใจแล้ว เข้าสู่แดชบอร์ด</button>
+  </div>
+</section>
+
+<!-- ==================================================================
+     PAGE 5 — DASHBOARD
+     ================================================================== -->
+<section id="page-dashboard" class="app-page hidden">
+  <div class="dashboard-topbar">
+    <div class="dashboard-topbar-brand">
+      <div class="dashboard-topbar-logo">KS</div>
+      <div id="dashboard-shop-name">กำลังโหลด...</div>
+    </div>
+    <button id="btn-logout" class="btn-logout">ออกจากระบบ</button>
+  </div>
+  <div class="dashboard-content">
+    <h2 class="dashboard-section-title">ฟีเจอร์หลัก</h2>
+    <div class="feature-grid">
+      <div class="feature-card" data-feature="waiter">
+        <div class="feature-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+        <div>
+          <div class="feature-card-title">สั่งอาหาร</div>
+          <div class="feature-card-desc">รับออเดอร์จากโต๊ะ</div>
+        </div>
+      </div>
+      <div class="feature-card" data-feature="kitchen">
+        <div class="feature-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg></div>
+        <div>
+          <div class="feature-card-title">ครัว</div>
+          <div class="feature-card-desc">ดูออเดอร์ที่เข้ามา</div>
+        </div>
+      </div>
+      <div class="feature-card" data-feature="cashier">
+        <div class="feature-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+        <div>
+          <div class="feature-card-title">แคชเชียร์</div>
+          <div class="feature-card-desc">คิดเงิน / ปิดบิล</div>
+        </div>
+      </div>
+      <div class="feature-card" data-feature="admin">
+        <div class="feature-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <div>
+          <div class="feature-card-title">ระบบหลังบ้าน</div>
+          <div class="feature-card-desc">จัดการข้อมูลร้าน</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sales-history-panel">
+      <h2 class="dashboard-section-title" style="margin-bottom: 24px;">สรุปยอดขายวันนี้</h2>
+      <div id="dashboard-sales-summary">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     PAGE 6 — WAITER (ระบบสั่งอาหาร)
+     ================================================================== -->
+<section id="page-waiter" class="app-page hidden">
+  <div class="feature-topbar">
+    <div class="feature-topbar-left">
+      <button class="btn-back-dashboard" data-back-to-dashboard>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2 class="feature-topbar-title">สั่งอาหาร</h2>
+    </div>
+    <div class="staff-badge" id="waiter-staff-badge">พนักงาน</div>
+  </div>
+  <div class="waiter-content">
+    <div id="waiter-tables-view">
+      <h3 class="dashboard-section-title">เลือกโต๊ะ</h3>
+      <div id="waiter-tables-grid" class="table-picker-grid"></div>
+    </div>
+    <div id="waiter-menu-view" class="hidden">
+      <div class="waiter-active-table-bar">
+        <div id="waiter-active-table-bar-inner">
+          <div id="waiter-active-table-label">โต๊ะ...</div>
+          <div class="waiter-active-table-hint">แตะเพื่อเปลี่ยนโต๊ะ</div>
+        </div>
+        <button id="btn-waiter-view-cart" class="btn btn-primary">ตะกร้า (0)</button>
+      </div>
+      <div id="waiter-menu-grid" class="menu-grid"></div>
+    </div>
+  </div>
+  
+  <div id="waiter-cart-panel" class="slide-panel-overlay hidden">
+    <div class="slide-panel">
+      <div class="slide-panel-header">
+        <h3 class="dashboard-section-title" style="margin:0;">รายการที่เลือก</h3>
+        <button id="btn-waiter-close-cart" class="btn-ghost" style="border-radius: 50%; width: 36px; height: 36px; padding: 0;">✕</button>
+      </div>
+      <div id="waiter-cart-list" class="pending-list-wrap"></div>
+      <button id="btn-waiter-send-order" class="btn btn-primary btn-full">ส่งเข้าครัว</button>
+    </div>
+  </div>
+  <div id="waiter-toast" class="waiter-sent-toast">ส่งรายการอาหารเข้าครัวแล้ว</div>
+</section>
+
+<!-- ==================================================================
+     PAGE 7 — KITCHEN (ระบบครัว)
+     ================================================================== -->
+<section id="page-kitchen" class="app-page hidden">
+  <div class="feature-topbar">
+    <div class="feature-topbar-left">
+      <button class="btn-back-dashboard" data-back-to-dashboard>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2 class="feature-topbar-title">ครัว</h2>
+    </div>
+    <div class="staff-badge" id="kitchen-staff-badge">พ่อครัว</div>
+  </div>
+  <div class="kitchen-content" id="kitchen-orders-container">
+    <p class="empty-state-text">กำลังโหลด...</p>
+  </div>
+</section>
+
+<!-- ==================================================================
+     PAGE 8 — CASHIER (ระบบแคชเชียร์)
+     ================================================================== -->
+<section id="page-cashier" class="app-page hidden">
+  <div class="feature-topbar">
+    <div class="feature-topbar-left">
+      <button class="btn-back-dashboard" data-back-to-dashboard>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2 class="feature-topbar-title">แคชเชียร์</h2>
+    </div>
+    <div class="staff-badge" id="cashier-staff-badge">แคชเชียร์</div>
+  </div>
+  <div class="cashier-content">
+    <div id="cashier-bills-container" class="cashier-bills-grid">
+      <p class="empty-state-text" style="grid-column: 1/-1;">กำลังโหลด...</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     PAGE 9 — ADMIN LOCK & ADMIN (ระบบหลังบ้าน)
+     ================================================================== -->
+<section id="page-admin-lock" class="app-page hidden">
+  <div class="admin-lock-card">
+    <div class="admin-lock-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+    </div>
+    <h2 class="admin-lock-title">ป้อนรหัสผ่านหลังบ้าน</h2>
+    <form id="form-admin-unlock">
+      <div class="field-group">
+        <input id="admin-pin-input" class="field-input" type="password" required placeholder="รหัสผ่าน (PIN)" />
+      </div>
+      <div id="admin-pin-error" class="field-error hidden" style="margin-bottom: 16px;">รหัสผ่านไม่ถูกต้อง</div>
+      <button type="submit" class="btn btn-primary btn-full">ยืนยัน</button>
+    </form>
+    <button class="admin-lock-back" data-back-to-dashboard>กลับไปหน้าแรก</button>
+  </div>
+</section>
+
+<section id="page-admin" class="app-page hidden">
+  <div class="feature-topbar">
+    <div class="feature-topbar-left">
+      <button class="btn-back-dashboard" data-back-to-dashboard>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2 class="feature-topbar-title">ระบบหลังบ้าน</h2>
+    </div>
+  </div>
+  <div class="admin-content">
+    <div class="admin-tabs">
+      <button class="admin-tab-btn admin-tab-btn-active" data-tab="info">ข้อมูลร้าน</button>
+      <button class="admin-tab-btn" data-tab="tables">โต๊ะ</button>
+      <button class="admin-tab-btn" data-tab="menu">เมนู</button>
+      <button class="admin-tab-btn" data-tab="staff">พนักงาน</button>
+      <button class="admin-tab-btn" data-tab="devices">อุปกรณ์</button>
+    </div>
+    
+    <div class="admin-panel-card admin-tab-panel" data-tab-panel="info">
+      <h3 class="admin-panel-title">ตั้งค่าข้อมูลร้าน</h3>
+      <div id="admin-shop-info-success" class="field-success hidden">บันทึกข้อมูลสำเร็จ</div>
+      <form id="form-admin-shop-info">
+        <div class="field-group">
+          <label class="field-label">ชื่อร้าน</label>
+          <input id="admin-shop-name-input" class="field-input" required />
+        </div>
+        <div class="field-group">
+          <label class="field-label">ประเภทร้าน</label>
+          <select id="admin-shop-type-input" class="field-select" required>
+            <option value="restaurant">ร้านอาหาร</option>
+            <option value="drinks">ร้านเครื่องดื่ม</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+        </div>
+        <div class="field-group hidden" id="admin-shop-type-other-wrap">
+          <label class="field-label">ระบุประเภท</label>
+          <input id="admin-shop-type-other-input" class="field-input" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">เปลี่ยนรหัสผ่านหลังบ้านใหม่ (เว้นว่างหากไม่เปลี่ยน)</label>
+          <input id="admin-shop-password-input" type="password" class="field-input" />
+        </div>
+        <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+      </form>
+    </div>
+
+    <div class="admin-panel-card admin-tab-panel hidden" data-tab-panel="tables">
+      <h3 class="admin-panel-title">จัดการโต๊ะ</h3>
+      <div id="admin-table-count-success" class="field-success hidden">อัปเดตจำนวนโต๊ะสำเร็จ</div>
+      <form id="form-admin-table-count">
+        <div class="field-group">
+          <label class="field-label">จำนวนโต๊ะทั้งหมด</label>
+          <input id="admin-table-count-input" type="number" min="1" class="field-input" required />
+        </div>
+        <button type="submit" class="btn btn-primary">อัปเดตจำนวนโต๊ะ</button>
+      </form>
+    </div>
+
+    <div class="admin-panel-card admin-tab-panel hidden" data-tab-panel="menu">
+      <h3 class="admin-panel-title">เพิ่มเมนูใหม่</h3>
+      <form id="form-admin-add-menu-item" class="admin-add-form-row">
+        <div class="field-group" style="flex:2">
+          <label class="field-label">ชื่อเมนู</label>
+          <input id="admin-menu-name-input" class="field-input" required />
+        </div>
+        <div class="field-group">
+          <label class="field-label">หมวดหมู่ (ไม่บังคับ)</label>
+          <input id="admin-menu-category-input" class="field-input" placeholder="เช่น เครื่องดื่ม" />
+        </div>
+        <div class="field-group" style="max-width: 120px;">
+          <label class="field-label">ราคา</label>
+          <input id="admin-menu-price-input" type="number" min="0" class="field-input" required />
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-bottom: 18px;">เพิ่ม</button>
+      </form>
+      <div class="admin-panel-divider"></div>
+      <h3 class="admin-panel-title">เมนูทั้งหมด</h3>
+      <div id="admin-menu-list"></div>
+    </div>
+
+    <div class="admin-panel-card admin-tab-panel hidden" data-tab-panel="staff">
+      <h3 class="admin-panel-title">เพิ่มพนักงาน</h3>
+      <form id="form-admin-add-staff" class="admin-add-form-row">
+        <div class="field-group" style="flex:1">
+          <label class="field-label">ชื่อพนักงาน</label>
+          <input id="admin-staff-name-input" class="field-input" required />
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-bottom: 18px;">เพิ่ม</button>
+      </form>
+      <div class="admin-panel-divider"></div>
+      <h3 class="admin-panel-title">พนักงานและสิทธิ์การเข้าถึง</h3>
+      <div id="admin-staff-list"></div>
+    </div>
+
+    <div class="admin-panel-card admin-tab-panel hidden" data-tab-panel="devices">
+      <h3 class="admin-panel-title">อุปกรณ์ที่เคยเข้าสู่ระบบ</h3>
+      <p class="modal-subtitle" style="margin-bottom: 16px;">เช็คประวัติหรือเตะอุปกรณ์อื่นที่น่าสงสัยออกจากระบบได้</p>
+      <div id="admin-device-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODALS
+     ================================================================== -->
+<div id="staff-picker-modal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <button class="modal-close-x" id="staff-picker-cancel">✕</button>
+    <h3 class="modal-title">เลือกพนักงาน</h3>
+    <p class="modal-subtitle">ใครกำลังเข้าใช้งานฟีเจอร์นี้?</p>
+    <div id="staff-picker-list" class="staff-picker-list"></div>
+  </div>
+</div>
+
+<div id="cashier-close-modal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h3 class="modal-title">ปิดบิล</h3>
+    <p class="modal-subtitle">ยืนยันการปิดบิลของ <span id="cashier-close-modal-table" style="font-weight:700; color:var(--color-ink);"></span></p>
+    <div class="cashier-close-modal-stats">
+      <span style="font-weight:600;">ยอดรวมสุทธิ</span>
+      <span id="cashier-close-modal-total" style="font-size:24px; font-weight:700; color:var(--color-primary-dark); font-family: var(--font-display);"></span>
+    </div>
+    <div class="cashier-close-modal-actions">
+      <button id="btn-cashier-confirm-print" class="btn btn-primary btn-full">ปิดบิล และ พิมพ์ใบเสร็จ</button>
+      <button id="btn-cashier-confirm-noprint" class="btn btn-ghost btn-full">ปิดบิลเท่านั้น (ไม่พิมพ์)</button>
+      <button id="btn-cashier-cancel-close" class="modal-cancel-btn">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================================
+     JAVASCRIPT LOGIC (All features combined)
+     ================================================================== -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
+import { getDatabase, ref, get, set, update, push, remove, onValue, off, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js';
+
+// ------------------------------------------------------------------
+// ⚠️ FIREBASE CONFIGURATION ⚠️
+// กรุณาเปลี่ยนค่าด้านล่างนี้ให้ตรงกับ Firebase Project ของคุณ 
+// เพื่อให้ระบบสามารถใช้งานฐานข้อมูลและล็อคอินได้
+// ------------------------------------------------------------------
+const firebaseConfig = {
+  apiKey: "REPLACE_ME", 
+  authDomain: "REPLACE_ME.firebaseapp.com",
+  databaseURL: "https://REPLACE_ME.firebaseio.com",
+  projectId: "REPLACE_ME",
+  storageBucket: "REPLACE_ME.appspot.com",
+  messagingSenderId: "REPLACE_ME",
+  appId: "REPLACE_ME"
+};
+
+// Global State
+window.KSE = {
+  app: null, auth: null, db: null, user: null, shopPath: null,
+  shopInfo: null, staffList: {}, currentStaffName: null, currentStaffPerms: null, ownIp: null,
+  fb: { ref, get, set, update, push, remove, onValue, off, serverTimestamp }
+};
+
+const PAGES = ['page-onboarding', 'page-auth', 'page-create-shop', 'page-capture-warning', 'page-dashboard', 'page-waiter', 'page-kitchen', 'page-cashier', 'page-admin-lock', 'page-admin'];
+
+function showPage(pageId) {
+  PAGES.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === pageId) {
+      el.classList.remove('hidden');
+      requestAnimationFrame(() => el.classList.add('page-enter'));
+    } else {
+      el.classList.add('hidden');
+      el.classList.remove('page-enter');
+    }
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (pageId === 'page-dashboard') renderDashboardSalesSummary();
+}
+window.KSE.showPage = showPage;
+
+// ------------------------------------------------------------------
+// Core Application Setup (App.js logic)
+// ------------------------------------------------------------------
+async function initFirebase() {
+  if (firebaseConfig.apiKey === "REPLACE_ME") {
+    const bootError = document.getElementById('boot-error');
+    if (bootError) {
+      bootError.classList.remove('hidden');
+      document.getElementById('boot-error-detail').innerHTML = 
+        'กรุณาใส่การตั้งค่า Firebase ของคุณในส่วน <code>const firebaseConfig = {...}</code> ในโค้ด JavaScript ก่อนใช้งาน เพื่อให้ระบบเชื่อมต่อฐานข้อมูลได้';
+    }
+    return false;
+  }
+  try {
+    window.KSE.app = initializeApp(firebaseConfig);
+    window.KSE.auth = getAuth(window.KSE.app);
+    window.KSE.db = getDatabase(window.KSE.app);
+    return true;
+  } catch (err) {
+    console.error('Firebase Init Error:', err);
+    return false;
+  }
+}
+
+function watchAuthState() {
+  onAuthStateChanged(window.KSE.auth, async (user) => {
+    if (!user) {
+      window.KSE.user = null;
+      window.KSE.shopPath = null;
+      const onboarding = document.getElementById('page-onboarding');
+      if (onboarding.classList.contains('hidden')) showPage('page-auth');
+      return;
+    }
+    window.KSE.user = user;
+    window.KSE.shopPath = `shopsByOwner/${user.uid}`;
+    
+    const shopSnap = await get(ref(window.KSE.db, `${window.KSE.shopPath}/shopInfo`));
+    if (shopSnap.exists()) {
+      window.KSE.shopInfo = shopSnap.val();
+      await ensureSystemAdminExists();
+      await loadStaffList();
+      document.getElementById('dashboard-shop-name').textContent = window.KSE.shopInfo.name;
+      showPage('page-dashboard');
+    } else {
+      showPage('page-create-shop');
+    }
+  });
+}
+
+async function ensureSystemAdminExists() {
+  const staffRef = ref(window.KSE.db, `${window.KSE.shopPath}/staff`);
+  const snap = await get(staffRef);
+  if (snap.exists()) return;
+  await set(push(staffRef), { name: 'Admin', isSystemAdmin: true, permissions: { waiter: true, kitchen: true, cashier: true, admin: true }, createdAt: Date.now() });
+}
+
+async function loadStaffList() {
+  const snap = await get(ref(window.KSE.db, `${window.KSE.shopPath}/staff`));
+  window.KSE.staffList = snap.exists() ? snap.val() : {};
+}
+
+// ------------------------------------------------------------------
+// Auth & Onboarding Flow
+// ------------------------------------------------------------------
+let onboardingStep = 0;
+let onboardingSlides = [];
+function goToOnboardingStep(step) {
+  onboardingSlides.forEach((slide, i) => slide.classList.toggle('hidden', i !== step));
+  document.querySelectorAll('.onboarding-dot').forEach((dot, i) => dot.classList.toggle('onboarding-dot-active', i === step));
+  document.getElementById('btn-onboarding-next').textContent = step === onboardingSlides.length - 1 ? 'เริ่มต้นใช้งาน' : 'ถัดไป';
+}
+
+async function handleGoogleLogin() {
+  const btn = document.getElementById('btn-google-login');
+  const errEl = document.getElementById('auth-error');
+  errEl.classList.add('hidden');
+  btn.disabled = true; btn.classList.add('btn-loading');
+  try {
+    await signInWithPopup(window.KSE.auth, new GoogleAuthProvider());
+  } catch (err) {
+    errEl.textContent = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.classList.remove('btn-loading');
+  }
+}
+
+async function handleCreateShop(e) {
+  e.preventDefault();
+  const name = document.getElementById('shop-name').value.trim();
+  const type = document.getElementById('shop-type').value;
+  const adminPassword = document.getElementById('shop-admin-password').value;
+  const tableCount = parseInt(document.getElementById('shop-table-count').value, 10) || 10;
+  
+  if (adminPassword.length < 4) return alert('รหัสผ่านต้องมีอย่างน้อย 4 ตัว');
+  
+  const btn = document.getElementById('btn-create-shop-submit');
+  btn.disabled = true; btn.classList.add('btn-loading');
+  
+  try {
+    const shopInfo = { name, type, adminPassword, tableCount, createdAt: Date.now() };
+    await set(ref(window.KSE.db, `${window.KSE.shopPath}/shopInfo`), shopInfo);
+    window.KSE.shopInfo = shopInfo;
+    
+    const tablesUpdate = {};
+    for (let i = 1; i <= tableCount; i++) tablesUpdate[`table-${i}`] = { label: `โต๊ะ ${i}`, status: 'empty', currentBillId: null };
+    await set(ref(window.KSE.db, `${window.KSE.shopPath}/tables`), tablesUpdate);
+    
+    await ensureSystemAdminExists();
+    await loadStaffList();
+    
+    document.getElementById('capture-password-display').textContent = adminPassword;
+    showPage('page-capture-warning');
+    startCaptureCountdown();
+  } catch (err) {
+    alert('สร้างร้านไม่สำเร็จ กรุณาลองใหม่');
+  } finally {
+    btn.disabled = false; btn.classList.remove('btn-loading');
+  }
+}
+
+function startCaptureCountdown() {
+  const btn = document.getElementById('btn-capture-continue');
+  const ring = document.getElementById('capture-countdown-ring');
+  const label = document.getElementById('capture-countdown-label');
+  const circ = 2 * Math.PI * 26;
+  btn.disabled = true; btn.classList.remove('btn-ready');
+  ring.style.strokeDasharray = `${circ} ${circ}`; ring.style.strokeDashoffset = '0';
+  let remaining = 5; label.textContent = remaining;
+  
+  const interval = setInterval(() => {
+    remaining--;
+    ring.style.strokeDashoffset = `${circ * (1 - (5 - remaining) / 5)}`;
+    if (remaining <= 0) {
+      clearInterval(interval); label.textContent = '✓';
+      btn.disabled = false; btn.classList.add('btn-ready');
+    } else {
+      label.textContent = remaining;
+    }
+  }, 1000);
+}
+
+// ------------------------------------------------------------------
+// Dashboard & Navigation
+// ------------------------------------------------------------------
+function enterFeature(feature) {
+  const eligible = Object.entries(window.KSE.staffList || {}).filter(([, s]) => s.permissions && s.permissions[feature]);
+  if (eligible.length === 0) return alert('ไม่มีพนักงานที่มีสิทธิ์เข้าฟีเจอร์นี้');
+  if (eligible.length === 1) return selectStaffAndEnter(eligible[0][0], eligible[0][1], feature);
+  
+  const list = document.getElementById('staff-picker-list');
+  list.innerHTML = '';
+  eligible.forEach(([sId, sData]) => {
+    const btn = document.createElement('button');
+    btn.className = 'staff-picker-item'; btn.textContent = sData.name;
+    btn.onclick = () => { document.getElementById('staff-picker-modal').classList.add('hidden'); selectStaffAndEnter(sId, sData, feature); };
+    list.appendChild(btn);
+  });
+  document.getElementById('staff-picker-modal').classList.remove('hidden');
+}
+
+function selectStaffAndEnter(sId, sData, feature) {
+  window.KSE.currentStaffName = sData.name;
+  if (feature === 'admin') return showPage('page-admin-lock');
+  const map = { waiter: 'page-waiter', kitchen: 'page-kitchen', cashier: 'page-cashier' };
+  showPage(map[feature]);
+  window.dispatchEvent(new CustomEvent('kse:enter-feature', { detail: { feature } }));
+}
+
+function renderDashboardSalesSummary() {
+  const dateKey = new Date().toISOString().slice(0, 10);
+  get(ref(window.KSE.db, `${window.KSE.shopPath}/archivedStats/${dateKey}`)).then(snap => {
+    const stats = snap.exists() ? snap.val() : { totalRevenue: 0, orderCount: 0, orders: {} };
+    const el = document.getElementById('dashboard-sales-summary');
+    el.innerHTML = `
+      <div class="sales-summary-row">
+        <div class="sales-summary-stat">
+          <span class="sales-summary-label">ยอดขายวันนี้</span>
+          <span class="sales-summary-value">฿${(stats.totalRevenue || 0).toLocaleString('th-TH')}</span>
+        </div>
+        <div class="sales-summary-stat">
+          <span class="sales-summary-label">จำนวนบิลที่ปิดไป</span>
+          <span class="sales-summary-value">${stats.orderCount || 0} บิล</span>
+        </div>
+      </div>
+      <h3 class="dashboard-section-title" style="font-size: 15px; margin-top:16px;">ประวัติบิลที่ถูกปิดวันนี้</h3>
+      <div class="sales-order-list" style="margin-top:12px;">
+        ${Object.values(stats.orders || {}).sort((a,b) => b.closedAt - a.closedAt).map(o => `
+          <div class="sales-order-row">
+            <div class="sales-order-row-main">
+              <span class="sales-order-row-table">${o.tableLabel}</span>
+              <span class="sales-order-row-time">${new Date(o.closedAt).toLocaleTimeString('th-TH')}</span>
+            </div>
+            <div class="sales-order-row-total">฿${o.total.toLocaleString('th-TH')}</div>
+          </div>
+        `).join('')}
+        ${!stats.orderCount ? '<p class="empty-state-text-sm">ยังไม่มีบิลที่ชำระเงินเรียบร้อยแล้วในวันนี้</p>' : ''}
+      </div>
+    `;
+  });
+}
+
+// ------------------------------------------------------------------
+// Feature: WAITER
+// ------------------------------------------------------------------
+let waiterMenuCache = {}, waiterTablesCache = {}, waiterCart = {}, waiterActiveTableId = null, waiterMenuUnsub, waiterTablesUnsub;
+
+function waiterInit() {
+  window.addEventListener('kse:enter-feature', (e) => {
+    if (e.detail.feature !== 'waiter') return;
+    document.getElementById('waiter-staff-badge').textContent = window.KSE.currentStaffName || 'พนักงาน';
+    waiterMenuUnsub = onValue(ref(window.KSE.db, `${window.KSE.shopPath}/menu`), snap => { waiterMenuCache = snap.exists() ? snap.val() : {}; waiterRenderMenu(); });
+    waiterTablesUnsub = onValue(ref(window.KSE.db, `${window.KSE.shopPath}/tables`), snap => { waiterTablesCache = snap.exists() ? snap.val() : {}; waiterRenderTables(); });
+  });
+  window.addEventListener('kse:leave-feature', () => {
+    if (waiterMenuUnsub) off(ref(window.KSE.db, `${window.KSE.shopPath}/menu`));
+    if (waiterTablesUnsub) off(ref(window.KSE.db, `${window.KSE.shopPath}/tables`));
+    waiterActiveTableId = null; waiterCart = {};
+    document.getElementById('waiter-tables-view').classList.remove('hidden');
+    document.getElementById('waiter-menu-view').classList.add('hidden');
+  });
+
+  document.getElementById('waiter-active-table-bar-inner').onclick = () => {
+    document.getElementById('waiter-tables-view').classList.remove('hidden');
+    document.getElementById('waiter-menu-view').classList.add('hidden');
+    waiterActiveTableId = null;
+  };
+  document.getElementById('btn-waiter-view-cart').onclick = () => {
+    document.getElementById('waiter-cart-panel').classList.remove('hidden');
+    requestAnimationFrame(() => document.getElementById('waiter-cart-panel').classList.add('panel-slide-in'));
+    waiterRenderCart();
+  };
+  document.getElementById('btn-waiter-close-cart').onclick = () => {
+    document.getElementById('waiter-cart-panel').classList.remove('panel-slide-in');
+    setTimeout(() => document.getElementById('waiter-cart-panel').classList.add('hidden'), 400);
+  };
+  document.getElementById('btn-waiter-send-order').onclick = waiterSendOrder;
+}
+
+function waiterRenderTables() {
+  const grid = document.getElementById('waiter-tables-grid'); grid.innerHTML = '';
+  Object.entries(waiterTablesCache).forEach(([tId, t]) => {
+    const el = document.createElement('div');
+    el.className = `table-chip ${t.status === 'empty' ? 'table-chip-empty' : 'table-chip-occupied'}`;
+    el.innerHTML = `<span class="table-chip-label">${t.label}</span><span class="table-chip-status">${t.status === 'empty' ? 'ว่าง' : 'มีบิลอยู่'}</span>`;
+    el.onclick = () => {
+      waiterActiveTableId = tId; waiterCart = {}; waiterUpdateCartBadge();
+      document.getElementById('waiter-active-table-label').textContent = t.label;
+      document.getElementById('waiter-tables-view').classList.add('hidden');
+      document.getElementById('waiter-menu-view').classList.remove('hidden');
+    };
+    grid.appendChild(el);
+  });
+}
+
+function waiterRenderMenu() {
+  const grid = document.getElementById('waiter-menu-grid'); grid.innerHTML = '';
+  Object.entries(waiterMenuCache).filter(([, m]) => m.active !== false).forEach(([mId, m]) => {
+    const el = document.createElement('div'); el.className = 'menu-item-card';
+    el.innerHTML = `<span class="menu-item-name">${m.name}</span><span class="menu-item-price">฿${m.price.toLocaleString()}</span>`;
+    el.onclick = () => { waiterCart[mId] = (waiterCart[mId] || 0) + 1; waiterUpdateCartBadge(); };
+    grid.appendChild(el);
+  });
+}
+
+function waiterUpdateCartBadge() {
+  const count = Object.values(waiterCart).reduce((sum, qty) => sum + qty, 0);
+  document.getElementById('btn-waiter-view-cart').textContent = `ตะกร้า (${count})`;
+}
+
+function waiterRenderCart() {
+  const list = document.getElementById('waiter-cart-list'); list.innerHTML = '';
+  if (Object.keys(waiterCart).length === 0) return list.innerHTML = '<p class="empty-state-text-sm">ยังไม่ได้เลือกรายการใดๆ</p>';
+  Object.entries(waiterCart).forEach(([mId, qty]) => {
+    if (qty <= 0) return;
+    const m = waiterMenuCache[mId];
+    const el = document.createElement('div'); el.className = 'pending-item-row';
+    el.innerHTML = `
+      <div class="pending-item-name">${m.name}</div>
+      <div class="pending-item-qty">
+        <button class="qty-btn" onclick="waiterChangeQty('${mId}', -1)">-</button>
+        <span>${qty}</span>
+        <button class="qty-btn" onclick="waiterChangeQty('${mId}', 1)">+</button>
+      </div>
+      <div class="pending-item-subtotal">฿${(m.price * qty).toLocaleString()}</div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+window.waiterChangeQty = (mId, delta) => {
+  if (!waiterCart[mId]) return;
+  waiterCart[mId] += delta; if (waiterCart[mId] <= 0) delete waiterCart[mId];
+  waiterUpdateCartBadge(); waiterRenderCart();
+};
+
+async function waiterSendOrder() {
+  if (Object.keys(waiterCart).length === 0) return;
+  const tId = waiterActiveTableId, t = waiterTablesCache[tId];
+  let billId = t.currentBillId, now = Date.now();
+  const updates = {};
+  
+  if (!billId || t.status === 'empty') {
+    billId = push(ref(window.KSE.db, `${window.KSE.shopPath}/bills`)).key;
+    updates[`tables/${tId}/status`] = 'occupied';
+    updates[`tables/${tId}/currentBillId`] = billId;
+    updates[`bills/${billId}/status`] = 'open';
+    updates[`bills/${billId}/tableId`] = tId;
+    updates[`bills/${billId}/openedAt`] = now;
+  }
+  
+  Object.entries(waiterCart).forEach(([mId, qty]) => {
+    if (qty <= 0) return;
+    const itemKey = push(ref(window.KSE.db)).key;
+    updates[`bills/${billId}/items/${itemKey}`] = { menuId: mId, name: waiterMenuCache[mId].name, price: waiterMenuCache[mId].price, qty, status: 'pending', addedAt: now };
+  });
+  
+  await update(ref(window.KSE.db, window.KSE.shopPath), updates);
+  
+  waiterCart = {}; waiterUpdateCartBadge();
+  document.getElementById('btn-waiter-close-cart').click();
+  const toast = document.getElementById('waiter-toast');
+  toast.classList.add('toast-show'); setTimeout(() => toast.classList.remove('toast-show'), 2000);
+  document.getElementById('waiter-active-table-bar-inner').click(); // go back to tables
+}
+
+// ------------------------------------------------------------------
+// Feature: KITCHEN
+// ------------------------------------------------------------------
+let kitchenBillsUnsub = null, kitchenTablesCache = {};
+function kitchenInit() {
+  window.addEventListener('kse:enter-feature', (e) => {
+    if (e.detail.feature !== 'kitchen') return;
+    document.getElementById('kitchen-staff-badge').textContent = window.KSE.currentStaffName || 'พ่อครัว';
+    onValue(ref(window.KSE.db, `${window.KSE.shopPath}/tables`), snap => kitchenTablesCache = snap.exists() ? snap.val() : {});
+    kitchenBillsUnsub = onValue(ref(window.KSE.db, `${window.KSE.shopPath}/bills`), snap => kitchenRenderOrders(snap.exists() ? snap.val() : {}));
+  });
+  window.addEventListener('kse:leave-feature', () => {
+    if (kitchenBillsUnsub) off(ref(window.KSE.db, `${window.KSE.shopPath}/bills`));
+  });
+}
+
+function kitchenRenderOrders(bills) {
+  const container = document.getElementById('kitchen-orders-container'); container.innerHTML = '';
+  const openBills = Object.entries(bills).filter(([, b]) => b.status === 'open');
+  let hasPending = false;
+  
+  openBills.sort((a,b) => a[1].openedAt - b[1].openedAt).forEach(([bId, bill]) => {
+    const items = bill.items ? Object.entries(bill.items).filter(([, i]) => i.status === 'pending') : [];
+    if (items.length === 0) return;
+    hasPending = true;
+    
+    const card = document.createElement('div'); card.className = 'kitchen-order-card';
+    card.innerHTML = `
+      <div class="kitchen-order-header">
+        <span class="kitchen-order-table">${kitchenTablesCache[bill.tableId]?.label || 'โต๊ะ...'}</span>
+        <span class="kitchen-order-count">${items.length} รายการรอทำ</span>
+      </div>
+      <div class="kitchen-order-items">
+        ${items.sort((a,b)=>a[1].addedAt-b[1].addedAt).map(([iId, i]) => `
+          <div class="kitchen-item-row" onclick="kitchenMarkDone('${bId}', '${iId}', this)">
+            <input type="checkbox" class="kitchen-item-checkbox" />
+            <span class="kitchen-item-qty">${i.qty}x</span>
+            <span class="kitchen-item-name">${i.name}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+  if (!hasPending) container.innerHTML = '<p class="empty-state-text">เยี่ยมมาก! ไม่มีออเดอร์ค้างในครัวเลยตอนนี้</p>';
+}
+
+window.kitchenMarkDone = async (billId, itemId, el) => {
+  el.classList.add('kitchen-item-done-animating');
+  el.querySelector('input').checked = true;
+  await update(ref(window.KSE.db, `${window.KSE.shopPath}/bills/${billId}/items/${itemId}`), { status: 'done' });
+};
+
+// ------------------------------------------------------------------
+// Feature: CASHIER
+// ------------------------------------------------------------------
+let cashierBillsUnsub = null, cashierTablesCache = {}, cashierPendingBillId = null, cashierTimers = {};
+function cashierInit() {
+  window.addEventListener('kse:enter-feature', (e) => {
+    if (e.detail.feature !== 'cashier') return;
+    document.getElementById('cashier-staff-badge').textContent = window.KSE.currentStaffName || 'แคชเชียร์';
+    onValue(ref(window.KSE.db, `${window.KSE.shopPath}/tables`), snap => cashierTablesCache = snap.exists() ? snap.val() : {});
+    cashierBillsUnsub = onValue(ref(window.KSE.db, `${window.KSE.shopPath}/bills`), snap => {
+      const bills = snap.exists() ? snap.val() : {};
+      cashierRenderBills(bills); cashierScheduleArchival(bills);
+    });
+  });
+  window.addEventListener('kse:leave-feature', () => {
+    if (cashierBillsUnsub) off(ref(window.KSE.db, `${window.KSE.shopPath}/bills`));
+    Object.values(cashierTimers).forEach(clearTimeout); cashierTimers = {};
+  });
+
+  document.getElementById('btn-cashier-confirm-print').onclick = () => cashierFinalizeClose(true);
+  document.getElementById('btn-cashier-confirm-noprint').onclick = () => cashierFinalizeClose(false);
+  document.getElementById('btn-cashier-cancel-close').onclick = () => document.getElementById('cashier-close-modal').classList.add('hidden');
+}
+
+function cashierRenderBills(bills) {
+  const container = document.getElementById('cashier-bills-container'); container.innerHTML = '';
+  const openBills = Object.entries(bills).filter(([, b]) => b.status === 'open');
+  if (openBills.length === 0) return container.innerHTML = '<p class="empty-state-text" style="grid-column:1/-1">ยังไม่มีบิลที่ต้องชำระเงิน</p>';
+  
+  openBills.sort((a,b) => a[1].openedAt - b[1].openedAt).forEach(([bId, bill]) => {
+    const items = bill.items ? Object.values(bill.items) : [];
+    const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const tableLab = cashierTablesCache[bill.tableId]?.label || 'โต๊ะไม่ทราบชื่อ';
+    
+    const card = document.createElement('div'); card.className = 'cashier-bill-card';
+    card.innerHTML = `
+      <div class="cashier-bill-header"><span class="cashier-bill-table">${tableLab}</span><span class="cashier-bill-count">${items.length} รายการ</span></div>
+      <div class="cashier-bill-total">฿${total.toLocaleString('th-TH')}</div>
+      <button class="btn-close-bill">ปิดบิลโต๊ะนี้</button>
+    `;
+    card.querySelector('button').onclick = () => {
+      cashierPendingBillId = bId;
+      document.getElementById('cashier-close-modal-table').textContent = tableLab;
+      document.getElementById('cashier-close-modal-total').textContent = `฿${total.toLocaleString('th-TH')}`;
+      document.getElementById('cashier-close-modal').classList.remove('hidden');
+    };
+    container.appendChild(card);
+  });
+}
+
+async function cashierFinalizeClose(shouldPrint) {
+  const bId = cashierPendingBillId; if (!bId) return;
+  document.getElementById('cashier-close-modal').classList.add('hidden');
+  
+  const billSnap = await get(ref(window.KSE.db, `${window.KSE.shopPath}/bills/${bId}`));
+  if (!billSnap.exists()) return;
+  const bill = billSnap.val(), items = bill.items ? Object.values(bill.items) : [], total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  
+  if (shouldPrint) cashierPrintReceipt(bill, items, total);
+  
+  const updates = {};
+  updates[`bills/${bId}/status`] = 'closed';
+  updates[`bills/${bId}/closedAt`] = Date.now();
+  updates[`bills/${bId}/total`] = total;
+  updates[`tables/${bill.tableId}/status`] = 'empty';
+  updates[`tables/${bill.tableId}/currentBillId`] = null;
+  await update(ref(window.KSE.db, window.KSE.shopPath), updates);
+  cashierPendingBillId = null;
+}
+
+function cashierPrintReceipt(bill, items, total) {
+  const shopName = window.KSE.shopInfo?.name || 'KitSyncEasy', tableLab = cashierTablesCache[bill.tableId]?.label || 'โต๊ะ';
+  const lines = items.map(i => `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">฿${(i.price*i.qty).toLocaleString()}</td></tr>`).join('');
+  const w = window.open('', '_blank', 'width=380,height=600');
+  w.document.write(`<html><head><title>ใบเสร็จ</title><style>body{font-family:monospace;padding:16px;color:#111}h2,p{margin:4px 0;text-align:center}table{width:100%;border-collapse:collapse;margin-top:12px}td{padding:4px 0;border-bottom:1px dashed #ccc;font-size:13px}.total-row td{border-top:2px solid #111;border-bottom:none;font-weight:bold;padding-top:8px}</style></head><body><h2>${shopName}</h2><p>${tableLab}</p><p>${new Date().toLocaleString('th-TH')}</p><table>${lines}<tr class="total-row"><td>รวมทั้งหมด</td><td></td><td style="text-align:right">฿${total.toLocaleString()}</td></tr></table><p style="margin-top:16px">ขอบคุณที่ใช้บริการ</p></body></html>`);
+  w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
+}
+
+function cashierScheduleArchival(bills) {
+  Object.entries(bills).forEach(([bId, b]) => {
+    if (b.status !== 'closed' || !b.closedAt || cashierTimers[bId]) return;
+    const remain = Math.max((30 * 60 * 1000) - (Date.now() - b.closedAt), 0); // 30 min archive
+    cashierTimers[bId] = setTimeout(() => cashierArchiveBill(bId), remain);
+  });
+}
+async function cashierArchiveBill(bId) {
+  const bSnap = await get(ref(window.KSE.db, `${window.KSE.shopPath}/bills/${bId}`)); if (!bSnap.exists()) return;
+  const bill = bSnap.val(), items = bill.items ? Object.values(bill.items) : [], total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const dk = new Date(bill.closedAt).toISOString().slice(0, 10);
+  const sRef = ref(window.KSE.db, `${window.KSE.shopPath}/archivedStats/${dk}`);
+  const sSnap = await get(sRef); const st = sSnap.exists() ? sSnap.val() : { totalRevenue: 0, orderCount: 0, orders: {} };
+  st.totalRevenue += total; st.orderCount++;
+  st.orders = st.orders || {}; st.orders[bId] = { tableLabel: cashierTablesCache[bill.tableId]?.label || 'โต๊ะ', total, itemCount: items.length, closedAt: bill.closedAt };
+  await set(sRef, st); await remove(ref(window.KSE.db, `${window.KSE.shopPath}/bills/${bId}`));
+  delete cashierTimers[bId];
+}
+
+// ------------------------------------------------------------------
+// Feature: ADMIN (Back Office)
+// ------------------------------------------------------------------
+let adminUnsubs = [];
+function adminInit() {
+  document.getElementById('form-admin-unlock').onsubmit = (e) => {
+    e.preventDefault(); const inp = document.getElementById('admin-pin-input');
+    if (inp.value === window.KSE.shopInfo.adminPassword) {
+      inp.value = ''; document.getElementById('admin-pin-error').classList.add('hidden');
+      showPage('page-admin'); window.dispatchEvent(new CustomEvent('kse:enter-feature', { detail: { feature: 'admin' } }));
+    } else { document.getElementById('admin-pin-error').classList.remove('hidden'); inp.value = ''; inp.focus(); }
+  };
+  
+  window.addEventListener('kse:enter-feature', (e) => {
+    if (e.detail.feature !== 'admin') return;
+    const info = window.KSE.shopInfo;
+    document.getElementById('admin-shop-name-input').value = info.name;
+    document.getElementById('admin-shop-type-input').value = info.type;
+    document.getElementById('admin-shop-type-other-input').value = info.typeOther || '';
+    document.getElementById('admin-shop-type-other-wrap').classList.toggle('hidden', info.type !== 'other');
+    document.getElementById('admin-shop-password-input').value = '';
+    document.getElementById('admin-table-count-input').value = info.tableCount;
+    
+    adminUnsubs.push(onValue(ref(window.KSE.db, `${window.KSE.shopPath}/menu`), snap => adminRenderMenuList(snap.exists() ? snap.val() : {})));
+    adminUnsubs.push(onValue(ref(window.KSE.db, `${window.KSE.shopPath}/staff`), snap => adminRenderStaffList(snap.exists() ? snap.val() : {})));
+    adminUnsubs.push(onValue(ref(window.KSE.db, `${window.KSE.shopPath}/devices`), snap => adminRenderDeviceList(snap.exists() ? snap.val() : {})));
+    adminReportOwnDevice();
+  });
+  window.addEventListener('kse:leave-feature', () => { adminUnsubs.forEach(u => u()); adminUnsubs = []; });
+  
+  document.querySelectorAll('.admin-tab-btn').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.toggle('admin-tab-btn-active', btn === b));
+    document.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.tabPanel !== b.dataset.tab));
+  });
+
+  document.getElementById('admin-shop-type-input').onchange = (e) => document.getElementById('admin-shop-type-other-wrap').classList.toggle('hidden', e.target.value !== 'other');
+  document.getElementById('form-admin-shop-info').onsubmit = async (e) => {
+    e.preventDefault();
+    const type = document.getElementById('admin-shop-type-input').value;
+    const pw = document.getElementById('admin-shop-password-input').value;
+    if (pw && pw.length < 4) return alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัว');
+    const updates = { name: document.getElementById('admin-shop-name-input').value.trim(), type, typeOther: type === 'other' ? document.getElementById('admin-shop-type-other-input').value.trim() : null };
+    if (pw) updates.adminPassword = pw;
+    await update(ref(window.KSE.db, `${window.KSE.shopPath}/shopInfo`), updates);
+    Object.assign(window.KSE.shopInfo, updates);
+    document.getElementById('dashboard-shop-name').textContent = updates.name; document.getElementById('admin-shop-password-input').value = '';
+    const suc = document.getElementById('admin-shop-info-success'); suc.classList.remove('hidden'); setTimeout(()=>suc.classList.add('hidden'), 2000);
+  };
+  document.getElementById('form-admin-table-count').onsubmit = async (e) => {
+    e.preventDefault(); const nc = parseInt(document.getElementById('admin-table-count-input').value, 10); if (!nc || nc < 1) return;
+    const tRef = ref(window.KSE.db, `${window.KSE.shopPath}/tables`); const ex = (await get(tRef)).val() || {}; const ec = Object.keys(ex).length;
+    if (nc > ec) {
+      const adds = {}; for(let i=ec+1; i<=nc; i++) adds[`table-${i}`] = { label: `โต๊ะ ${i}`, status: 'empty', currentBillId: null };
+      await update(tRef, adds);
+    } else if (nc < ec) {
+      const rem = Object.entries(ex).filter(([,t])=>t.status==='empty').sort((a,b)=>b[0].localeCompare(a[0],undefined,{numeric:true})).slice(0, ec-nc);
+      if (rem.length < ec-nc) alert('มีบางโต๊ะติดลูกค้าอยู่ ไม่สามารถลดจำนวนได้ตามต้องการ กรุณาปิดบิลก่อน');
+      for (const [id] of rem) await remove(ref(window.KSE.db, `${window.KSE.shopPath}/tables/${id}`));
+    }
+    await update(ref(window.KSE.db, `${window.KSE.shopPath}/shopInfo`), { tableCount: nc }); window.KSE.shopInfo.tableCount = nc;
+    const suc = document.getElementById('admin-table-count-success'); suc.classList.remove('hidden'); setTimeout(()=>suc.classList.add('hidden'), 2000);
+  };
+  document.getElementById('form-admin-add-menu-item').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('admin-menu-name-input').value.trim(); const pr = parseFloat(document.getElementById('admin-menu-price-input').value); const cat = document.getElementById('admin-menu-category-input').value.trim();
+    if (!name || isNaN(pr) || pr < 0) return alert('กรอกให้ถูกต้อง');
+    await set(push(ref(window.KSE.db, `${window.KSE.shopPath}/menu`)), { name, price: pr, category: cat || 'ทั่วไป', active: true });
+    e.target.reset();
+  };
+  document.getElementById('form-admin-add-staff').onsubmit = async (e) => {
+    e.preventDefault(); const n = document.getElementById('admin-staff-name-input').value.trim(); if (!n) return;
+    await set(push(ref(window.KSE.db, `${window.KSE.shopPath}/staff`)), { name: n, isSystemAdmin: false, permissions: { waiter: false, kitchen: false, cashier: false, admin: false }, createdAt: Date.now() });
+    e.target.reset();
+  };
+}
+
+function adminRenderMenuList(menu) {
+  const list = document.getElementById('admin-menu-list'); list.innerHTML = '';
+  if (!Object.keys(menu).length) return list.innerHTML = '<p class="empty-state-text-sm">ยังไม่มีเมนู</p>';
+  Object.entries(menu).forEach(([id, m]) => {
+    const r = document.createElement('div'); r.className = 'admin-list-row';
+    r.innerHTML = `<div class="admin-list-row-main"><span class="admin-list-row-title">${m.name}</span><span class="admin-list-row-sub">฿${m.price.toLocaleString()} · ${m.category}</span></div>
+      <label class="toggle-switch"><input type="checkbox" ${m.active !== false ? 'checked' : ''} onchange="window.adminToggleMenu('${id}', this.checked)" /><span class="toggle-slider"></span></label>
+      <button class="admin-list-row-delete" onclick="if(confirm('ลบเมนูนี้?')) window.adminDelMenu('${id}')">✕</button>`;
+    list.appendChild(r);
+  });
+}
+window.adminToggleMenu = (id, st) => set(ref(window.KSE.db, `${window.KSE.shopPath}/menu/${id}/active`), st);
+window.adminDelMenu = (id) => remove(ref(window.KSE.db, `${window.KSE.shopPath}/menu/${id}`));
+
+const PERMS = { waiter: 'สั่งอาหาร', kitchen: 'ครัว', cashier: 'แคชเชียร์', admin: 'หลังบ้าน' };
+function adminRenderStaffList(staff) {
+  window.KSE.staffList = staff;
+  const list = document.getElementById('admin-staff-list'); list.innerHTML = '';
+  Object.entries(staff).forEach(([id, s]) => {
+    const r = document.createElement('div'); r.className = 'admin-staff-row';
+    const ph = Object.entries(PERMS).map(([k,l])=>`<label class="staff-perm-chip"><input type="checkbox" ${s.permissions?.[k]?'checked':''} onchange="window.adminSetPerm('${id}','${k}',this.checked)" ${s.isSystemAdmin?'disabled':''}/><span>${l}</span></label>`).join('');
+    r.innerHTML = `<div class="admin-staff-row-header"><span class="admin-list-row-title">${s.name}${s.isSystemAdmin ? ' <span class="badge-system">ผู้ดูแลระบบ</span>' : ''}</span>
+      ${s.isSystemAdmin ? '' : `<button class="admin-list-row-delete" onclick="if(confirm('ลบพนักงาน?')) window.adminDelStaff('${id}')">✕</button>`}</div><div class="admin-staff-perms">${ph}</div>`;
+    list.appendChild(r);
+  });
+}
+window.adminSetPerm = (sId, p, st) => set(ref(window.KSE.db, `${window.KSE.shopPath}/staff/${sId}/permissions/${p}`), st);
+window.adminDelStaff = (sId) => remove(ref(window.KSE.db, `${window.KSE.shopPath}/staff/${sId}`));
+
+async function adminReportOwnDevice() {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json'); const { ip } = await res.json(); window.KSE.ownIp = ip;
+    const dk = ip.replace(/\./g, '_').replace(/:/g, '-'); const dRef = ref(window.KSE.db, `${window.KSE.shopPath}/devices/${dk}`);
+    const snap = await get(dRef);
+    if (snap.exists() && snap.val().blocked) { await signOut(window.KSE.auth); showPage('page-auth'); alert('อุปกรณ์นี้ถูกระงับการใช้งาน'); return; }
+    if (snap.exists()) update(dRef, { lastSeenAt: Date.now() }); else set(dRef, { ip, lastSeenAt: Date.now(), blocked: false });
+  } catch(e) {}
+}
+function adminRenderDeviceList(devs) {
+  const list = document.getElementById('admin-device-list'); list.innerHTML = '';
+  if (!Object.keys(devs).length) return list.innerHTML = '<p class="empty-state-text-sm">ไม่มีข้อมูลอุปกรณ์</p>';
+  Object.entries(devs).sort((a,b)=>b[1].lastSeenAt-a[1].lastSeenAt).forEach(([id, d]) => {
+    const r = document.createElement('div'); r.className = 'admin-list-row';
+    r.innerHTML = `<div class="admin-list-row-main"><span class="admin-list-row-title">${d.ip}${d.ip===window.KSE.ownIp?' <span class="badge-system">เครื่องนี้</span>':''}</span><span class="admin-list-row-sub">เข้าใช้ล่าสุด ${new Date(d.lastSeenAt).toLocaleString('th-TH')}</span></div>
+      ${d.blocked ? `<button class="btn-unblock-device" onclick="window.adminUnblockDev('${id}')">ปลดบล็อก</button>` : `<button class="btn-kick-device" onclick="if(confirm('เตะและบล็อกอุปกรณ์นี้?')) window.adminBlockDev('${id}')">ระงับ (Kick)</button>`}`;
+    list.appendChild(r);
+  });
+}
+window.adminBlockDev = (id) => update(ref(window.KSE.db, `${window.KSE.shopPath}/devices/${id}`), { blocked: true });
+window.adminUnblockDev = (id) => update(ref(window.KSE.db, `${window.KSE.shopPath}/devices/${id}`), { blocked: false });
+
+
+// ------------------------------------------------------------------
+// Boot Sequence
+// ------------------------------------------------------------------
+async function boot() {
+  onboardingSlides = document.querySelectorAll('.onboarding-slide'); goToOnboardingStep(0);
+  document.getElementById('shop-type').onchange = (e) => document.getElementById('shop-type-other-wrap').classList.toggle('hidden', e.target.value !== 'other');
+  document.querySelectorAll('[data-feature]').forEach(c => c.onclick = () => enterFeature(c.dataset.feature));
+  document.querySelectorAll('[data-back-to-dashboard]').forEach(b => b.onclick = () => { window.dispatchEvent(new CustomEvent('kse:leave-feature')); showPage('page-dashboard'); });
+  
+  document.getElementById('btn-onboarding-next').onclick = () => { if (onboardingStep < onboardingSlides.length - 1) { onboardingStep++; goToOnboardingStep(onboardingStep); } else showPage('page-auth'); };
+  document.getElementById('btn-onboarding-skip').onclick = () => showPage('page-auth');
+  document.getElementById('btn-google-login').onclick = handleGoogleLogin;
+  document.getElementById('btn-logout').onclick = async () => { await signOut(window.KSE.auth); window.KSE.shopInfo = null; showPage('page-auth'); };
+  document.getElementById('form-create-shop').onsubmit = handleCreateShop;
+  document.getElementById('btn-capture-continue').onclick = () => { showPage('page-dashboard'); document.getElementById('dashboard-shop-name').textContent = window.KSE.shopInfo.name; };
+  
+  waiterInit(); kitchenInit(); cashierInit(); adminInit();
+  
+  if (await initFirebase()) watchAuthState();
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+
+</body>
+</html>
